@@ -12,11 +12,19 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        /* Style for the success message animation */
+        .fade-out {
+            animation: fadeOut 3s forwards;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
 
-    <div class="text-center p-8 bg-gray-800 rounded-xl shadow-2xl max-w-sm mx-auto">
+    <div class="text-center p-8 bg-gray-800 rounded-xl shadow-2xl max-w-sm w-full mx-auto">
         <!-- Main Heading -->
         <h1 class="text-3xl font-bold mb-2">Push Notification Demo</h1>
         
@@ -24,24 +32,32 @@
         <p class="text-gray-400 mb-6">Click the button below to request permission and trigger a push notification.</p>
         
         <!-- Notification Button -->
-        <button id="notify-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 shadow-lg">
+        <button id="notify-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 shadow-lg disabled:bg-gray-500 disabled:cursor-not-allowed">
             Show Notification
         </button>
 
         <!-- Status Display Area -->
         <div id="status-container" class="mt-6 text-sm text-left bg-gray-900/50 p-4 rounded-lg">
-            <p class="text-gray-400">Status: <span id="permission-status" class="font-semibold capitalize">Checking...</span></p>
+            <div class="flex items-center">
+                <p class="text-gray-400">Status: <span id="permission-status" class="font-semibold capitalize">Checking...</span></p>
+            </div>
+            <p id="status-help" class="text-gray-500 text-xs mt-2"></p>
             <p id="https-warning" class="text-yellow-400 font-bold mt-2 hidden"></p>
         </div>
+        
+        <!-- Success Message Placeholder -->
+        <p id="success-message" class="text-green-400 mt-4 font-semibold"></p>
     </div>
 
     <script>
         const notifyBtn = document.getElementById('notify-btn');
         const statusEl = document.getElementById('permission-status');
         const httpsWarningEl = document.getElementById('https-warning');
+        const statusHelpEl = document.getElementById('status-help');
+        const successMessageEl = document.getElementById('success-message');
 
         /**
-         * Updates the status UI on the page
+         * Updates the status UI on the page with helpful text.
          */
         function updatePermissionStatusUI(permission) {
             statusEl.textContent = permission;
@@ -50,27 +66,35 @@
             switch(permission) {
                 case 'granted':
                     statusEl.classList.add('text-green-400');
+                    statusHelpEl.textContent = 'You are all set! Click the button to get a notification.';
                     break;
                 case 'denied':
                     statusEl.classList.add('text-red-400');
+                    statusHelpEl.textContent = 'Permission was denied. You must enable it in your browser\'s site settings.';
+                    notifyBtn.disabled = true;
+                    break;
+                case 'Not Supported':
+                    statusEl.classList.add('text-red-400');
+                    statusHelpEl.textContent = 'Sorry, your browser does not support web notifications.';
+                    notifyBtn.disabled = true;
                     break;
                 default: // 'default'
                     statusEl.classList.add('text-yellow-400');
+                    statusHelpEl.textContent = 'Please click the button to allow notifications.';
             }
         }
 
         // Run checks once the page content is loaded
         document.addEventListener('DOMContentLoaded', () => {
             // 1. Check for a secure connection (HTTPS) - Crucial for mobile!
-            if (window.location.protocol !== 'https:') {
-                httpsWarningEl.textContent = '⚠️ WARNING: Notifications require a secure (HTTPS) connection on mobile.';
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                httpsWarningEl.textContent = '⚠️ WARNING: Notifications require a secure (HTTPS) connection to work on mobile devices.';
                 httpsWarningEl.classList.remove('hidden');
             }
 
             // 2. Check if the browser supports the Notification API
             if (!("Notification" in window)) {
                 updatePermissionStatusUI('Not Supported');
-                notifyBtn.disabled = true;
                 return;
             }
             
@@ -80,14 +104,13 @@
 
         // Add a click event listener to the button
         notifyBtn.addEventListener('click', () => {
-            if (!("Notification" in window)) {
-                console.error("This browser does not support desktop notification");
-                return;
-            }
+            // Re-check support in case something went wrong
+            if (!("Notification" in window)) return;
 
             if (Notification.permission === "granted") {
                 createNotification();
             } else if (Notification.permission !== "denied") {
+                // This will trigger the browser's permission prompt
                 Notification.requestPermission().then(permission => {
                     updatePermissionStatusUI(permission);
                     if (permission === "granted") {
@@ -98,22 +121,37 @@
         });
 
         /**
-         * Creates and displays the actual notification.
+         * Creates and displays the actual notification and shows a success message.
          */
         function createNotification() {
             const title = "Hello from JavaScript!";
             const options = {
                 body: "This notification was triggered by clicking the button! ✨",
-                icon: "https://placehold.co/48x48/white/black?text=🔔",
-                tag: "demo-notification"
+                icon: "https://placehold.co/128x128/white/black?text=🔔",
+                tag: "demo-notification",
+                // On some mobile devices, notifications need to be re-shown to appear
+                renotify: true,
             };
 
-            const notification = new Notification(title, options);
+            try {
+                const notification = new Notification(title, options);
 
-            notification.onclick = (event) => {
-                event.preventDefault(); 
-                window.focus();
-            };
+                notification.onclick = (event) => {
+                    event.preventDefault(); 
+                    window.parent.focus(); // Focus the parent window, useful in iframes
+                };
+
+                // Show a temporary success message on the page
+                successMessageEl.textContent = '✅ Notification sent successfully!';
+                successMessageEl.classList.remove('fade-out');
+                // We need to trigger a reflow to restart the animation
+                void successMessageEl.offsetWidth; 
+                successMessageEl.classList.add('fade-out');
+
+            } catch (error) {
+                console.error('Error creating notification:', error);
+                statusHelpEl.textContent = 'Could not create notification. See console for details.';
+            }
         }
 
     </script>
