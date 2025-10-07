@@ -3,506 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subham's Daily Command Center</title>
-
-    <!-- Tailwind CSS -->
+    <title>JavaScript Push Notification Demo</title>
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Google Fonts: Lexend -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
     <style>
-        /* Base Styling */
+        /* Using a custom font from Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         body {
-            font-family: 'Lexend', sans-serif;
-            background-color: #0A0A0F;
-            color: #E5E7EB;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        /* Gradient & Pattern Background */
-        .main-background {
-            background-image: radial-gradient(ellipse at top right, rgba(141, 91, 8, 0.1), transparent 60%);
-            position: absolute;
-            inset: 0;
-            z-index: -1;
-        }
-
-        /* Glassmorphism Card Effect */
-        .glass-card {
-            background-color: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .task-card:hover {
-             transform: translateY(-5px);
-             box-shadow: 0 10px 30px rgba(212, 175, 55, 0.1);
-        }
-
-        /* Custom Checkbox Styling */
-        .task-item[data-completed="true"] {
-             background-color: rgba(212, 175, 55, 0.1);
-             border-color: rgba(212, 175, 55, 0.3);
-        }
-        .task-item[data-completed="true"] .task-text {
-            color: #9CA3AF;
-            text-decoration: line-through;
-        }
-        .checkbox-box[data-completed="true"] {
-            background-color: #D4AF37;
-            border-color: #D4AF37;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-        }
-
-        /* Modal Animations */
-        .modal { transition: opacity 0.3s ease; }
-        .modal-content { transition: transform 0.3s ease, opacity 0.3s ease; }
-        .modal.hidden { opacity: 0; pointer-events: none; }
-        .modal.hidden .modal-content { transform: scale(0.95); opacity: 0; }
-
-        /* Confetti Animation */
-        .confetti-piece {
-            position: fixed;
-            width: 10px;
-            height: 10px;
-            top: -20px;
-            z-index: 9999;
-            animation: confetti-fall linear forwards;
-        }
-        @keyframes confetti-fall {
-            to {
-                transform: translateY(110vh) rotate(720deg);
-                opacity: 0;
-            }
+            font-family: 'Inter', sans-serif;
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-    <div class="main-background"></div>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
 
-    <div id="app-container" class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Header will be rendered here -->
-        <div id="header-container"></div>
+    <div class="text-center p-8 bg-gray-800 rounded-xl shadow-2xl max-w-sm mx-auto">
+        <!-- Main Heading -->
+        <h1 class="text-3xl font-bold mb-2">Push Notification Demo</h1>
         
-        <!-- Progress Bar will be rendered here -->
-        <div id="progress-container" class="mt-6"></div>
-
-        <!-- Schedule Sections will be rendered here -->
-        <div id="schedule-container" class="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
-
-        <!-- Motivational Quote will be rendered here -->
-        <div id="quote-container" class="mt-12"></div>
+        <!-- Instructional Text -->
+        <p class="text-gray-400 mb-6">Click the button below to request permission and trigger a push notification.</p>
+        
+        <!-- Notification Button -->
+        <button id="notify-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 shadow-lg">
+            Show Notification
+        </button>
     </div>
 
-    <!-- Modals and Overlays -->
-    <div id="notification-modal-container"></div>
-    <div id="completion-modal-container"></div>
-    <div id="confetti-container"></div>
-
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const app = {
-                // --- STATE & CONFIG ---
-                state: {
-                    completedTasks: {},
-                    notificationPermission: 'default',
-                    showConfetti: false,
-                    currentNotification: null,
-                    showCompletionModal: false,
-                    completedTaskInfo: null,
-                },
-                elements: {
-                    header: document.getElementById('header-container'),
-                    progress: document.getElementById('progress-container'),
-                    schedule: document.getElementById('schedule-container'),
-                    quote: document.getElementById('quote-container'),
-                    notificationModal: document.getElementById('notification-modal-container'),
-                    completionModal: document.getElementById('completion-modal-container'),
-                    confetti: document.getElementById('confetti-container'),
-                },
-                scheduleData: [
-                    { id: "morning", title: "🌅 Morning", time: "4:30 AM – 7:00 AM", startTime: "04:30", color: "from-amber-500/20 to-orange-500/20", accentColor: "border-amber-500/40", tasks: ["Wake up at 4:30 AM", "Go for a run or brisk walk (30–45 mins)", "Do 5–10 mins stretching", "Take a shower and eat a light healthy breakfast"] },
-                    { id: "focus", title: "🧠 Focus Time", time: "7:00 AM – 9:30 AM", startTime: "02:19", color: "from-blue-500/20 to-purple-500/20", accentColor: "border-blue-500/40", tasks: ["Do coding or study", "Avoid distractions", "Just focus on learning or building small things"] },
-                    { id: "college", title: "🏫 College", time: "10:00 AM – 6:00 PM", startTime: "10:00", color: "from-green-500/20 to-emerald-500/20", accentColor: "border-green-500/40", tasks: ["Attend classes", "Eat light lunch", "Stay hydrated and walk between breaks"] },
-                    { id: "evening", title: "💻 Evening", time: "6:30 PM – 9:00 PM", startTime: "18:30", color: "from-purple-500/20 to-pink-500/20", accentColor: "border-purple-500/40", tasks: ["Do typing work or small projects", "Eat light dinner", "Spend some time relaxing or listening to music"] },
-                    { id: "night", title: "🌙 Night", time: "9:00 PM – 10:00 PM", startTime: "21:00", color: "from-indigo-500/20 to-blue-500/20", accentColor: "border-indigo-500/40", tasks: ["Write 3 things you did well today", "Avoid phone before bed", "Sleep by 10:00 PM so you wake fresh at 4:30 AM"] }
-                ],
-                
-                // --- INITIALIZATION ---
-                init() {
-                    this.loadProgress();
-                    this.checkDailyReset();
-                    this.renderAll();
-                    
-                    setInterval(() => {
-                        this.checkDailyReset();
-                        this.checkScheduledNotifications();
-                    }, 60000);
-                    
-                    setInterval(() => this.renderHeader(), 1000);
-                },
+        // Get the button element from the DOM
+        const notifyBtn = document.getElementById('notify-btn');
 
-                // --- RENDERING ENGINE ---
-                renderAll() {
-                    this.renderHeader();
-                    this.renderProgressBar();
-                    this.renderSchedule();
-                    this.renderQuote();
-                    this.renderNotificationModal();
-                    this.renderCompletionModal();
-                    this.renderConfetti();
-                },
+        // Add a click event listener to the button
+        notifyBtn.addEventListener('click', () => {
+            // First, check if the browser supports the Notification API
+            if (!("Notification" in window)) {
+                console.error("This browser does not support desktop notification");
+                alert("Sorry, your browser doesn't support push notifications.");
+                return;
+            }
 
-                renderHeader() {
-                    const progress = this.calculateProgress();
-                    const now = new Date();
-                    const getGreeting = () => {
-                        const hour = now.getHours();
-                        if (hour < 12) return "Good Morning";
-                        if (hour < 18) return "Good Afternoon";
-                        return "Good Evening";
-                    };
-                    const formatTime = (date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-                    const formatDate = (date) => date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-                    this.elements.header.innerHTML = `
-                        <div class="glass-card rounded-3xl p-8 shadow-2xl">
-                            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                                <div>
-                                    <h1 class="text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 mb-2">${getGreeting()}, Subham</h1>
-                                    <p class="text-slate-400 text-lg">Your Daily Command Center</p>
-                                </div>
-                                <div class="flex items-center gap-4 flex-wrap justify-end">
-                                    <div class="text-right">
-                                        <div class="flex items-center gap-2 text-amber-400 mb-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                            <span class="text-2xl font-bold tabular-nums">${formatTime(now)}</span>
-                                        </div>
-                                        <p class="text-slate-500 text-sm">${formatDate(now)}</p>
-                                    </div>
-                                    <div class="h-16 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent hidden sm:block"></div>
-                                    <div class="text-center">
-                                        <div class="flex items-center gap-2 text-amber-400 mb-1">
-                                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.5V22"/><path d="M14 14.5V22"/><path d="M15 9l-3-3-3 3"/><path d="M12 14.5V6"/></svg>
-                                            <span class="text-3xl font-bold">${progress}%</span>
-                                        </div>
-                                        <p class="text-slate-500 text-sm">Completed</p>
-                                    </div>
-                                    <div class="h-16 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent hidden sm:block"></div>
-                                    <div id="controls-container" class="text-center">
-                                        <!-- Test Notification Button will be rendered here -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>`;
-                    
-                    this.renderHeaderButtons();
-                },
-                
-                renderHeaderButtons() {
-                     const controlsContainer = this.elements.header.querySelector('#controls-container');
-                     if (!controlsContainer) return;
-                     
-                     let buttonHtml = `
-                        <button id="test-notify-btn" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-semibold py-2 px-5 rounded-full transition-colors duration-200 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                            Test Notification
-                        </button>
-                     `;
-                     controlsContainer.innerHTML = buttonHtml;
-
-                     // Attach event listener for the new test button
-                    controlsContainer.querySelector('#test-notify-btn').addEventListener('click', () => {
-                        // This logic is directly from your screenshot
-                        Notification.requestPermission().then(perm => {
-                            if (perm === "granted") {
-                                new Notification("Example notification");
-                            } else {
-                                alert("Please allow notifications to see this feature.");
-                            }
-                        });
-                    });
-                },
-
-                renderProgressBar() {
-                     const progress = this.calculateProgress();
-                     this.elements.progress.innerHTML = `
-                        <div class="glass-card rounded-2xl p-6 shadow-xl">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="text-slate-300 font-semibold">Daily Progress</h3>
-                                <span class="text-amber-400 font-bold text-lg">${progress}%</span>
-                            </div>
-                            <div class="relative h-4 bg-slate-800/50 rounded-full overflow-hidden">
-                                <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 rounded-full shadow-lg shadow-amber-500/50" style="width: ${progress}%; transition: width 0.8s ease-out;"></div>
-                                ${progress > 0 ? `<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" style="width: ${progress}%;"></div>` : ''}
-                            </div>
-                            ${progress === 100 ? `<p class="text-center text-amber-400 font-semibold mt-3">🎉 Amazing! You've completed all tasks today!</p>` : ''}
-                        </div>`;
-                },
-                
-                renderSchedule() {
-                    this.elements.schedule.innerHTML = this.scheduleData.map((section) => {
-                         const isAllCompleted = section.tasks.every((_, taskIndex) => this.state.completedTasks[`${section.id}-${taskIndex}`]);
-                         const tasksHtml = section.tasks.map((task, taskIndex) => {
-                             const key = `${section.id}-${taskIndex}`;
-                             const isCompleted = this.state.completedTasks[key];
-                             return `
-                                <div class="task-item flex items-start gap-4 p-4 rounded-xl transition-all duration-300 cursor-pointer bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20" 
-                                     data-completed="${!!isCompleted}"
-                                     data-key="${key}">
-                                    <div class="flex-shrink-0 mt-0.5">
-                                        <div class="checkbox-box w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 border-slate-600 hover:border-amber-500/50" data-completed="${!!isCompleted}">
-                                            ${isCompleted ? `<svg class="w-4 h-4 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>` : ''}
-                                        </div>
-                                    </div>
-                                    <p class="task-text flex-1 text-base leading-relaxed transition-all duration-300 text-slate-200">${task}</p>
-                                </div>`;
-                         }).join('');
-
-                         return `
-                            <div class="task-card glass-card rounded-3xl p-8 shadow-2xl hover:shadow-amber-500/10 group relative overflow-hidden bg-gradient-to-br ${section.color} border ${section.accentColor}">
-                                <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                <div class="relative">
-                                    <div class="flex items-start justify-between mb-6">
-                                        <div>
-                                            <h2 class="text-2xl font-bold text-white mb-1">${section.title}</h2>
-                                            <p class="text-slate-400 text-sm font-medium">${section.time}</p>
-                                        </div>
-                                        ${isAllCompleted ? `
-                                            <div class="bg-amber-500/20 border border-amber-500/50 rounded-full p-3">
-                                                <svg class="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
-                                            </div>` : ''}
-                                    </div>
-                                    <div class="space-y-3">${tasksHtml}</div>
-                                </div>
-                            </div>`;
-                    }).join('');
-
-                    this.elements.schedule.querySelectorAll('.task-item').forEach(item => {
-                        item.addEventListener('click', () => {
-                            const [sectionId, taskIndex] = item.dataset.key.split('-');
-                            this.toggleTask(sectionId, parseInt(taskIndex));
-                        });
-                    });
-                },
-
-                renderQuote() {
-                    const quotes = ["The secret of getting ahead is getting started.", "Discipline is the bridge between goals and accomplishment.", "Success is the sum of small efforts, repeated day in and day out."];
-                    this.elements.quote.innerHTML = `<p class="text-center text-slate-600 italic">"${quotes[Math.floor(Math.random() * quotes.length)]}"</p>`;
-                },
-
-                renderNotificationModal() {
-                    if (!this.state.currentNotification) {
-                        this.elements.notificationModal.innerHTML = '';
-                        return;
+            // Let's check whether notification permissions have already been granted
+            if (Notification.permission === "granted") {
+                // If it's okay let's create a notification
+                createNotification();
+            } 
+            // Otherwise, we need to ask the user for permission
+            else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    // If the user accepts, let's create a notification
+                    if (permission === "granted") {
+                        createNotification();
+                    } else {
+                        console.log("User denied the permission for notifications.");
                     }
-                    const section = this.state.currentNotification;
-                    const tasksHtml = section.tasks.map(task => `<li class="text-slate-400 text-sm flex items-start gap-2"><span class="text-amber-400 mt-1">•</span><span>${task}</span></li>`).join('');
-                    this.elements.notificationModal.innerHTML = `
-                        <div class="modal fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                            <div class="modal-content glass-card bg-gradient-to-br from-slate-900/95 to-slate-800/95 border-amber-500/30 rounded-3xl p-8 max-w-md w-full shadow-2xl">
-                                <div class="flex items-start justify-between mb-6">
-                                    <div class="flex items-center gap-3">
-                                        <div class="bg-amber-500/20 border border-amber-500/50 rounded-full p-3">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-amber-400"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-xl font-bold text-white">Time for:</h3>
-                                            <p class="text-amber-400 font-semibold">${section.title}</p>
-                                        </div>
-                                    </div>
-                                    <button id="close-modal-btn" class="text-slate-400 hover:text-white transition-colors">
-                                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
-                                </div>
-                                <div class="bg-white/5 border border-white/10 rounded-2xl p-4 mb-6"><ul class="space-y-2">${tasksHtml}</ul></div>
-                                <div class="flex gap-3">
-                                    <button id="dismiss-modal-btn" class="flex-1 border-slate-600 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg border">Dismiss</button>
-                                    <button id="complete-modal-btn" class="flex-1 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mr-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                                        Mark Complete
-                                    </button>
-                                </div>
-                            </div>
-                        </div>`;
-                    
-                    document.getElementById('close-modal-btn').addEventListener('click', () => this.hideNotification());
-                    document.getElementById('dismiss-modal-btn').addEventListener('click', () => this.hideNotification());
-                    document.getElementById('complete-modal-btn').addEventListener('click', () => {
-                        this.markSectionComplete(section.id);
-                        this.hideNotification();
-                    });
-                },
+                });
+            }
+            // At last, if the user has denied notifications, and you 
+            // want to be annoying, you can bother them about it.
+            else {
+                 console.warn("User has permanently denied notifications.");
+            }
+        });
 
-                renderCompletionModal() {
-                    if (!this.state.showCompletionModal || !this.state.completedTaskInfo) {
-                        this.elements.completionModal.innerHTML = '';
-                        return;
-                    }
-                    const { sectionTitle, taskText } = this.state.completedTaskInfo;
-                    this.elements.completionModal.innerHTML = `
-                        <div class="modal fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-                            <div class="modal-content backdrop-blur-xl bg-gradient-to-br from-amber-500/95 to-yellow-500/95 border-2 border-amber-300 rounded-3xl p-8 max-w-md w-full shadow-2xl pointer-events-auto">
-                                <div class="flex flex-col items-center text-center">
-                                    <div class="relative mb-4">
-                                        <div class="absolute inset-0 bg-white/30 rounded-full blur-xl animate-pulse"></div>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-20 h-20 text-white relative z-10"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                                    </div>
-                                    <h2 class="text-3xl font-bold text-white mb-2">Awesome! 🎉</h2>
-                                    <div class="mb-4">
-                                        <p class="text-amber-100 font-semibold mb-1">${sectionTitle}</p>
-                                        <p class="text-white/90 text-lg">"${taskText}"</p>
-                                    </div>
-                                    <div class="flex items-center gap-2 text-white/80">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m12 3-1.45 4.1-4.1 1.45 4.1 1.45 1.45 4.1 1.45-4.1 4.1-1.45-4.1-1.45z"/><path d="M3 21 4.9 16.1 2 14.2l4.9-1.9L9 8l2.1 4.9 4.9 1.9-4.9 1.9L9 21z"/></svg>
-                                        <span class="font-medium">Task Completed!</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m12 3-1.45 4.1-4.1 1.45 4.1 1.45 1.45 4.1 1.45-4.1 4.1-1.45-4.1-1.45z"/><path d="M3 21 4.9 16.1 2 14.2l4.9-1.9L9 8l2.1 4.9 4.9 1.9-4.9 1.9L9 21z"/></svg>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>`;
-                },
-                
-                renderConfetti() {
-                    if (!this.state.showConfetti) {
-                        this.elements.confetti.innerHTML = '';
-                        return;
-                    }
-                    this.elements.confetti.innerHTML = `<div class="fixed inset-0 z-[9998] pointer-events-none"></div>`;
-                    const colors = ["#fbbf24", "#f59e0b", "#d97706", "#b45309", "#92400e"];
-                    for (let i = 0; i < 100; i++) {
-                        const confetti = document.createElement("div");
-                        confetti.className = "confetti-piece";
-                        confetti.style.left = Math.random() * 100 + "vw";
-                        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                        confetti.style.animationDelay = Math.random() * 3 + "s";
-                        confetti.style.animationDuration = Math.random() * 3 + 2 + "s";
-                        this.elements.confetti.firstChild.appendChild(confetti);
-                        setTimeout(() => confetti.remove(), 5000);
-                    }
-                },
-
-                // --- LOGIC & EVENT HANDLERS ---
-                async requestNotificationPermission() {
-                    if ("Notification" in window) {
-                        if (Notification.permission === "default") {
-                            const permission = await Notification.requestPermission();
-                            this.state.notificationPermission = permission;
-                        } else {
-                             this.state.notificationPermission = Notification.permission;
-                        }
-                    }
-                },
-                
-                sendBrowserNotification(title, body) {
-                    if (this.state.notificationPermission === "granted") {
-                        new Notification(title, {
-                            body,
-                            icon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNkNGFmMzciIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgMjJjNS41MjMgMCAxMC00LjQ3NyAxMC0xMFMxNy41MjMgMiAxMiAyIDIgNi40NzcgMiAxMnM0LjQ3NyAxMCAxMCAxMHoiLz48cGF0aCBkPSJtOSAxMiAyIDIgNC00Ii8+PC9zdmc+",
-                            vibrate: [200, 100, 200],
-                            tag: "daily-command-center-notification"
-                        });
-                    }
-                },
-                
-                loadProgress() { this.state.completedTasks = JSON.parse(localStorage.getItem("dailyProgress") || "{}"); },
-                saveProgress() {
-                    localStorage.setItem("dailyProgress", JSON.stringify(this.state.completedTasks));
-                    localStorage.setItem("lastSaveDate", new Date().toDateString());
-                },
-                
-                checkDailyReset() {
-                    const lastSave = localStorage.getItem("lastSaveDate");
-                    const today = new Date().toDateString();
-                    if (lastSave && lastSave !== today) {
-                        this.state.completedTasks = {};
-                        this.saveProgress();
-                        this.renderAll();
-                    }
-                },
-                
-                checkScheduledNotifications() {
-                    const now = new Date();
-                    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                    this.scheduleData.forEach(section => {
-                        if (section.startTime === currentTime) this.showScheduleNotification(section);
-                    });
-                },
-                
-                showScheduleNotification(section) {
-                    this.sendBrowserNotification( "Daily Command Center", `Time for: ${section.title.split(" ")[1]} ${section.time}`);
-                    this.state.currentNotification = section;
-                    this.renderNotificationModal();
-                },
-
-                hideNotification() {
-                    this.state.currentNotification = null;
-                    this.renderNotificationModal();
-                },
-
-                toggleTask(sectionId, taskIndex) {
-                    const key = `${sectionId}-${taskIndex}`;
-                    const isCompleting = !this.state.completedTasks[key];
-                    this.state.completedTasks[key] = isCompleting;
-                    this.saveProgress();
-
-                    if (isCompleting) {
-                        const section = this.scheduleData.find(s => s.id === sectionId);
-                        const taskText = section.tasks[taskIndex];
-                        this.state.completedTaskInfo = { sectionTitle: section.title, taskText };
-                        this.state.showCompletionModal = true;
-                        this.renderCompletionModal();
-                        
-                        this.sendBrowserNotification("Task Completed! 🎉", `${section.title}: ${taskText}`);
-                        
-                        setTimeout(() => {
-                            this.state.showCompletionModal = false;
-                            this.state.completedTaskInfo = null;
-                            this.renderCompletionModal();
-                        }, 3000);
-                    }
-                    
-                    const progress = this.calculateProgress();
-                    if (progress === 100 && !this.state.showConfetti) {
-                        this.state.showConfetti = true;
-                        this.renderConfetti();
-                        setTimeout(() => {
-                            this.state.showConfetti = false;
-                            this.renderConfetti();
-                        }, 5000);
-                    }
-
-                    this.renderSchedule();
-                    this.renderProgressBar();
-                    this.renderHeader();
-                },
-                
-                markSectionComplete(sectionId) {
-                    const section = this.scheduleData.find(s => s.id === sectionId);
-                    section.tasks.forEach((_, index) => {
-                        this.state.completedTasks[`${sectionId}-${index}`] = true;
-                    });
-                    this.saveProgress();
-                    this.renderAll();
-                    this.sendBrowserNotification("Section Completed! 🌟", `${section.title} - All tasks done!`);
-                },
-                
-                calculateProgress() {
-                    const totalTasks = this.scheduleData.reduce((sum, section) => sum + section.tasks.length, 0);
-                    const completed = Object.values(this.state.completedTasks).filter(Boolean).length;
-                    return totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
-                },
+        /**
+         * Creates and displays the actual notification.
+         */
+        function createNotification() {
+            const title = "Hello from JavaScript!";
+            
+            const options = {
+                body: "This notification was triggered by clicking the button! ✨",
+                // You can use a URL for the icon
+                icon: "https://placehold.co/48x48/white/black?text=🔔",
+                // A tag can be used to overwrite previous notifications with the same tag
+                tag: "demo-notification"
             };
 
-            app.init();
-        });
+            const notification = new Notification(title, options);
+
+            // You can also add event listeners to the notification itself
+            notification.onclick = (event) => {
+                // By default, clicking a notification does nothing. You can make it focus the window.
+                event.preventDefault(); // prevent the browser's default behavior
+                window.focus();
+                // Or you could open a new window/tab:
+                // window.open('https://www.google.com', '_blank');
+            };
+        }
+
     </script>
+
 </body>
 </html>
-
