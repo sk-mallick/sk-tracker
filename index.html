@@ -27,41 +27,73 @@
         <button id="notify-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 shadow-lg">
             Show Notification
         </button>
+
+        <!-- Status Display Area -->
+        <div id="status-container" class="mt-6 text-sm text-left bg-gray-900/50 p-4 rounded-lg">
+            <p class="text-gray-400">Status: <span id="permission-status" class="font-semibold capitalize">Checking...</span></p>
+            <p id="https-warning" class="text-yellow-400 font-bold mt-2 hidden"></p>
+        </div>
     </div>
 
     <script>
-        // Get the button element from the DOM
         const notifyBtn = document.getElementById('notify-btn');
+        const statusEl = document.getElementById('permission-status');
+        const httpsWarningEl = document.getElementById('https-warning');
+
+        /**
+         * Updates the status UI on the page
+         */
+        function updatePermissionStatusUI(permission) {
+            statusEl.textContent = permission;
+            statusEl.classList.remove('text-green-400', 'text-red-400', 'text-yellow-400');
+
+            switch(permission) {
+                case 'granted':
+                    statusEl.classList.add('text-green-400');
+                    break;
+                case 'denied':
+                    statusEl.classList.add('text-red-400');
+                    break;
+                default: // 'default'
+                    statusEl.classList.add('text-yellow-400');
+            }
+        }
+
+        // Run checks once the page content is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Check for a secure connection (HTTPS) - Crucial for mobile!
+            if (window.location.protocol !== 'https:') {
+                httpsWarningEl.textContent = '⚠️ WARNING: Notifications require a secure (HTTPS) connection on mobile.';
+                httpsWarningEl.classList.remove('hidden');
+            }
+
+            // 2. Check if the browser supports the Notification API
+            if (!("Notification" in window)) {
+                updatePermissionStatusUI('Not Supported');
+                notifyBtn.disabled = true;
+                return;
+            }
+            
+            // 3. Set the initial permission status
+            updatePermissionStatusUI(Notification.permission);
+        });
 
         // Add a click event listener to the button
         notifyBtn.addEventListener('click', () => {
-            // First, check if the browser supports the Notification API
             if (!("Notification" in window)) {
                 console.error("This browser does not support desktop notification");
-                alert("Sorry, your browser doesn't support push notifications.");
                 return;
             }
 
-            // Let's check whether notification permissions have already been granted
             if (Notification.permission === "granted") {
-                // If it's okay let's create a notification
                 createNotification();
-            } 
-            // Otherwise, we need to ask the user for permission
-            else if (Notification.permission !== "denied") {
+            } else if (Notification.permission !== "denied") {
                 Notification.requestPermission().then(permission => {
-                    // If the user accepts, let's create a notification
+                    updatePermissionStatusUI(permission);
                     if (permission === "granted") {
                         createNotification();
-                    } else {
-                        console.log("User denied the permission for notifications.");
                     }
                 });
-            }
-            // At last, if the user has denied notifications, and you 
-            // want to be annoying, you can bother them about it.
-            else {
-                 console.warn("User has permanently denied notifications.");
             }
         });
 
@@ -70,24 +102,17 @@
          */
         function createNotification() {
             const title = "Hello from JavaScript!";
-            
             const options = {
                 body: "This notification was triggered by clicking the button! ✨",
-                // You can use a URL for the icon
                 icon: "https://placehold.co/48x48/white/black?text=🔔",
-                // A tag can be used to overwrite previous notifications with the same tag
                 tag: "demo-notification"
             };
 
             const notification = new Notification(title, options);
 
-            // You can also add event listeners to the notification itself
             notification.onclick = (event) => {
-                // By default, clicking a notification does nothing. You can make it focus the window.
-                event.preventDefault(); // prevent the browser's default behavior
+                event.preventDefault(); 
                 window.focus();
-                // Or you could open a new window/tab:
-                // window.open('https://www.google.com', '_blank');
             };
         }
 
@@ -95,3 +120,4 @@
 
 </body>
 </html>
+
